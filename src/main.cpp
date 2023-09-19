@@ -12,24 +12,23 @@
 
 
 
-// Функция для конвертации изображения BMP из RGB в YUV420
 void rgbToYuv420(const std::vector<uint8_t>& rgb, std::vector<uint8_t>& yuv420, int width, int height, int startRow, int endRow) {
+    try {
     // Размеры Y-плоскости
     int yPlaneSize = width * height;
-
     // Размеры U и V плоскостей 
     int uvPlaneSize = yPlaneSize / 4;
 
     // Разделение Y, U и V плоскостей в выходном векторе
     yuv420.resize(yPlaneSize + 2 * uvPlaneSize);
 
-    // Итераторы для Y, U и V плоскостей
+
     uint8_t* yPtr = yuv420.data();
     uint8_t* uPtr = yPtr + yPlaneSize;
     uint8_t* vPtr = uPtr + uvPlaneSize;
 
     for (int row = startRow; row < endRow; row+=2) {
-        // Обратный порядок обхода строк (отражение по вертикали)
+        // Обратный порядок обхода строк (отражение по вертикали т.к. в бмп файлы хранятся отраженными)
         int reversedRow = height - 1 - row;
         for (int col = 0; col < width; col+=2) {
             int rgbIndex = (reversedRow * width + col) * 3;
@@ -62,18 +61,23 @@ void rgbToYuv420(const std::vector<uint8_t>& rgb, std::vector<uint8_t>& yuv420, 
           
         }
     }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+    }
 }
 
-// Функция для наложения изображения на кадр видео в верхнем левом углу
+// Функция для наложения изображения на кадр видео по координатам х у
 void overlayImageOnFrame(const std::vector<uint8_t>& imageYUV, std::vector<uint8_t>& frameYUV, int frameWidth, int frameHeight, int imageWidth, int imageHeight, int x = 0, int y = 0) {
+   try {
     int yPlaneSizeVID = frameWidth * frameHeight;
     int yPlaneSizePic = imageWidth * imageHeight;
 
-    // Масштабируем размеры изображения до размеров кадра видео
+    // обрезаем изображение если координаты поставлены так что изображение не влезет.
     int scaledImageWidth = std::min(imageWidth, frameWidth - x);
     int scaledImageHeight = std::min(imageHeight, frameHeight - y);
 
-    // Налагаем компоненту Y (яркость) изображения на компоненту Y кадра видео
+    // Налагаем компоненту Y (яркость) изображения 
     for (int row = 0; row < scaledImageHeight; row++) {
         for (int col = 0; col < scaledImageWidth; col++) {
             int imageIndex = (row * imageWidth + col);
@@ -82,7 +86,7 @@ void overlayImageOnFrame(const std::vector<uint8_t>& imageYUV, std::vector<uint8
         }
     }
 
-    // Налагаем компоненты U и V (цветовые разности) изображения на кадр видео
+    // Налагаем компоненты U и V (цветовые разности)
     for (int row = 0; row < scaledImageHeight / 2; row++) {
         for (int col = 0; col < scaledImageWidth / 2; col++) {
             int imageIndex = (yPlaneSizePic + row * (imageWidth / 2) + col);
@@ -94,11 +98,16 @@ void overlayImageOnFrame(const std::vector<uint8_t>& imageYUV, std::vector<uint8
             frameYUV[frameIndex] = imageYUV[imageIndex];//записали V часть (красная разность)
         }
     }
+     }
+    catch (const std::exception& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+    }
 }
 
 
 // Функция, которую будут выполнять потоки для наложения кадров.
 void processImageRows(const std::vector<uint8_t>& imageYUV, std::vector<uint8_t>& frameYUV, int frameWidth, int frameHeight, int imageWidth, int imageHeight, int x, int y, int startY, int endY) {
+    try {
     int yPlaneSizeVID = frameWidth * frameHeight;
     int yPlaneSizePic = imageWidth * imageHeight;
     int scaledImageWidth = std::min(imageWidth, frameWidth - x);
@@ -136,10 +145,14 @@ void processImageRows(const std::vector<uint8_t>& imageYUV, std::vector<uint8_t>
                 _mm_storeu_si128(reinterpret_cast<__m128i*>(&frameYUV[frameIndex]), imgV);
             }
         }
-
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+    }
 }
 
 void overlayImageOnFrameParallel(const std::vector<uint8_t>& imageYUV, std::vector<uint8_t>& frameYUV, int frameWidth, int frameHeight, int imageWidth, int imageHeight, int x = 0, int y = 0) {
+    try {
     int numThreads = std::thread::hardware_concurrency();
     if (numThreads == 0) {
         numThreads = 1; // Если не удается получить количество ядер, используем один поток
@@ -167,10 +180,15 @@ void overlayImageOnFrameParallel(const std::vector<uint8_t>& imageYUV, std::vect
     for (std::thread& thread : threads) {
         thread.join();
     }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+    }
 }
 
 
 void rgbToYuv420Parallel(const std::vector<uint8_t>& rgb, std::vector<uint8_t>& yuv420, int width, int height) {
+    try {
     int numThreads = std::thread::hardware_concurrency();
     if (numThreads == 0) {
         numThreads = 1; // Если не удается получить количество ядер, используем один поток
@@ -205,13 +223,20 @@ void rgbToYuv420Parallel(const std::vector<uint8_t>& rgb, std::vector<uint8_t>& 
     for (std::thread& thread : threads) {
         thread.join();
     }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+    }
 }
 
 
 int main(void) {
+    setlocale(LC_ALL, "Russian");
+    try {
     std::string inputImagePath, inputVideoPath, outputVideoName, outputImageName;
     int width = 0, height = 0, PicWigth = 0, PicHeight = 0, YuvWigth = 1280, YuvHeight = 720;
-    // Запрос пути к исходному изображению BMP
+    
+    
     std::cout << "Input bmp path: ";
     std::cin >> inputImagePath;
 
@@ -266,10 +291,10 @@ int main(void) {
 
 
 
+    
+
+
     // Конвертация изображения BMP в YUV420
-
-
-
     std::vector<uint8_t> yuv420;
     rgbToYuv420Parallel(rgba, yuv420, width, height);
 
@@ -302,22 +327,10 @@ int main(void) {
 
     std::cout << "Success as " << outputVideoPath << outputVideoName << ".yuv" << std::endl;
 
-    // Запрос нового имени файла для сохранения изображения
-    std::cout << "Input name image: ";
-    std::cin >> outputImageName;
-
-    // Создание пути к сохраняемому изображению
-    std::string outputImagePath = inputVideoPath.substr(0, lastSlashPos + 1) + outputImageName + ".yuv";
-
-    // Сохранение изображения BMP после конвертации в YUV420
-    std::ofstream outputImage(outputImagePath, std::ios::binary);
-    if (!outputImage.is_open()) {
-        std::cerr << "Error" << std::endl;
-        return 1;
+}
+    catch (const std::exception& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
     }
-    outputImage.write(reinterpret_cast<char*>(yuv420.data()), yuv420.size());
-    outputImage.close();
-    std::cout << "Image saved as " << outputImagePath << std::endl;
 
     return 0;
 }
