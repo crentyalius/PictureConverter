@@ -1,0 +1,3 @@
+"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\VIDEO.dir/objects.a
+C:\msys64\ucrt64\bin\ar.exe qc CMakeFiles\VIDEO.dir/objects.a @CMakeFiles\VIDEO.dir\objects1.rsp
+g++ -Wl,--whole-archive CMakeFiles\VIDEO.dir/objects.a -Wl,--no-whole-archive -o VIDEO.exe -Wl,--out-implib,libVIDEO.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\VIDEO.dir\linkLibs.rsp

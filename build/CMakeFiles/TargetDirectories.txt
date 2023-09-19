@@ -1,0 +1,3 @@
+C:/Users/vd/Desktop/code/CMPRJ2/build/CMakeFiles/VIDEO.dir
+C:/Users/vd/Desktop/code/CMPRJ2/build/CMakeFiles/edit_cache.dir
+C:/Users/vd/Desktop/code/CMPRJ2/build/CMakeFiles/rebuild_cache.dir
